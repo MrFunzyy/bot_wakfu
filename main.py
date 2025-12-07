@@ -18,6 +18,7 @@ POST_HOUR = 2  # Publication à 02h00 heure française
 tz = pytz.timezone("Europe/Paris")
 
 intents = discord.Intents.default()
+intents.message_content = True  # ← Ajouté
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 async def fetch_google_doc_text(url: str) -> str:
