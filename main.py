@@ -59,7 +59,7 @@ def get_today_column(rows):
 def build_message_from_column(rows, col_index):
     # DJs : lignes 4 à 19 → indices 3 à 18
     dj = []
-    for row in rows[3:19]:
+    for row in rows[4:19]:
         if col_index >= len(row):
             continue
         cell = row[col_index].strip()
@@ -68,7 +68,7 @@ def build_message_from_column(rows, col_index):
 
     # Modulox : lignes 21 à 25 → indices 20 à 24
     modulox = []
-    for row in rows[20:25]:
+    for row in rows[21:25]:
         if col_index >= len(row):
             continue
         cell = row[col_index].strip()
