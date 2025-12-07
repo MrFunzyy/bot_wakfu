@@ -80,44 +80,54 @@ def build_message_from_column(rows, col_index):
     # DJs : lignes 4 à 19 → indices 3 à 18
     dj = []
     for i, row in enumerate(rows[3:19], start=4):
-        if col_index >= len(row):
+        if col_index >= len(row) or len(row) < 1:
             continue
-        cell = row[col_index].strip()
-        if cell:
-            print(f"  DJ ligne {i}: {cell}")
-            dj.append(cell)
+        
+        label = row[0].strip() if len(row) > 0 else ""  # Colonne A
+        value = row[col_index].strip() if col_index < len(row) else ""  # Colonne du jour
+        
+        if value:  # Seulement si la colonne du jour a une valeur
+            print(f"  DJ ligne {i}: {label} - {value}")
+            dj.append((label, value))
 
     # Modulox : lignes 21 à 25 → indices 20 à 24
     modulox = []
     for i, row in enumerate(rows[20:25], start=21):
-        if col_index >= len(row):
+        if col_index >= len(row) or len(row) < 1:
             continue
-        cell = row[col_index].strip()
-        if cell:
-            print(f"  Modulox ligne {i}: {cell}")
-            modulox.append(cell)
+        
+        label = row[0].strip() if len(row) > 0 else ""  # Colonne A
+        value = row[col_index].strip() if col_index < len(row) else ""  # Colonne du jour
+        
+        if value:  # Seulement si la colonne du jour a une valeur
+            print(f"  Modulox ligne {i}: {label} - {value}")
+            modulox.append((label, value))
 
     if not dj and not modulox:
         print("⚠️ Aucune donnée trouvée dans cette colonne")
         return None
 
+    # Créer une liste des valeurs Modulox pour vérifier les doublons
+    modulox_values = [val for _, val in modulox]
+    dj_values = [val for _, val in dj]
+
     message = "**DJ du jour :**\n"
     if dj:
-        for item in dj:
-            if item in modulox:
-                message += f"- **{item}**\n"
+        for label, value in dj:
+            if value in modulox_values:
+                message += f"- **{label} : {value}**\n"
             else:
-                message += f"- {item}\n"
+                message += f"- {label} : {value}\n"
     else:
         message += "- Aucun\n"
 
     message += "\n**Modulox du jour :**\n"
     if modulox:
-        for item in modulox:
-            if item in dj:
-                message += f"- **{item}**\n"
+        for label, value in modulox:
+            if value in dj_values:
+                message += f"- **{label} : {value}**\n"
             else:
-                message += f"- {item}\n"
+                message += f"- {label} : {value}\n"
     else:
         message += "- Aucun\n"
 
