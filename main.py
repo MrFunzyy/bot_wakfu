@@ -30,58 +30,96 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ---------- FONCTIONS ----------
 async def fetch_google_sheet_csv(url: str):
+    """Récupère le CSV depuis Google Sheets"""
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
+            if resp.status != 200:
+                print(f"Erreur HTTP: {resp.status}")
+                return None
             text = await resp.text()
             reader = csv.reader(io.StringIO(text))
             return list(reader)
 
 
 def get_today_column(rows):
-    today = datetime.now(tz).strftime("%d/%m/%Y")  # format DD/MM/YYYY
+    """Trouve la colonne correspondant à aujourd'hui"""
+    today = datetime.now(tz).strftime("%d/%m/%Y")
+    print(f"📅 Date recherchée: {today}")
+    
+    if not rows or len(rows) == 0:
+        print("❌ Aucune ligne dans le CSV")
+        return None
+    
     header = rows[0]
+    print(f"📋 En-tête complet: {header}")
+    
     for i, date_str in enumerate(header):
         if not date_str:
             continue
-        # Nettoyage : enlever guillemets et espaces
-        clean_date = date_str.strip().replace('"', '')
+        
+        # Nettoyage plus robuste
+        clean_date = date_str.strip().replace('"', '').replace("'", "")
+        print(f"  Colonne {i}: '{date_str}' -> nettoyé: '{clean_date}'")
+        
         if clean_date == today:
+            print(f"✅ Date trouvée à la colonne {i}")
             return i
+    
+    print(f"❌ Aucune colonne ne correspond à {today}")
     return None
 
 
 def build_message_from_column(rows, col_index):
+    """Construit le message Discord à partir des données"""
+    print(f"📝 Construction du message pour la colonne {col_index}")
+    
+    # Vérifier qu'il y a assez de lignes
+    if len(rows) < 25:
+        print(f"⚠️ Seulement {len(rows)} lignes dans le CSV (25 attendues)")
+    
     # DJs : lignes 4 à 19 → indices 3 à 18
     dj = []
-    for row in rows[4:19]:
+    for i, row in enumerate(rows[3:19], start=4):
         if col_index >= len(row):
             continue
         cell = row[col_index].strip()
         if cell:
+            print(f"  DJ ligne {i}: {cell}")
             dj.append(cell)
 
     # Modulox : lignes 21 à 25 → indices 20 à 24
     modulox = []
-    for row in rows[21:25]:
+    for i, row in enumerate(rows[20:25], start=21):
         if col_index >= len(row):
             continue
         cell = row[col_index].strip()
         if cell:
+            print(f"  Modulox ligne {i}: {cell}")
             modulox.append(cell)
 
-    message = "**DJ du jour :**\n"
-    for item in dj:
-        if item in modulox:
-            message += f"- **{item}**\n"
-        else:
-            message += f"- {item}\n"
+    if not dj and not modulox:
+        print("⚠️ Aucune donnée trouvée dans cette colonne")
+        return None
 
-    message += "**Modulox du jour :**\n"
-    for item in modulox:
-        if item in dj:
-            message += f"- **{item}**\n"
-        else:
-            message += f"- {item}\n"
+    message = "**DJ du jour :**\n"
+    if dj:
+        for item in dj:
+            if item in modulox:
+                message += f"- **{item}**\n"
+            else:
+                message += f"- {item}\n"
+    else:
+        message += "- Aucun\n"
+
+    message += "\n**Modulox du jour :**\n"
+    if modulox:
+        for item in modulox:
+            if item in dj:
+                message += f"- **{item}**\n"
+            else:
+                message += f"- {item}\n"
+    else:
+        message += "- Aucun\n"
 
     return message
 # --------------------------------------------------
@@ -93,42 +131,90 @@ async def daily_task():
     while not bot.is_closed():
         now = datetime.now(tz)
         target = now.replace(hour=POST_HOUR, minute=0, second=0, microsecond=0)
-        if now > target:
+        if now >= target:
             target += timedelta(days=1)
 
         wait_seconds = (target - now).total_seconds()
-        print(f"Prochaine publication dans {wait_seconds/3600:.2f} heures")
+        print(f"⏰ Prochaine publication dans {wait_seconds/3600:.2f} heures")
         await asyncio.sleep(wait_seconds)
 
         channel = bot.get_channel(CHANNEL_ID)
         if channel:
-            rows = await fetch_google_sheet_csv(GOOGLE_SHEET_URL)
-            col_index = get_today_column(rows)
-            if col_index is not None:
-                msg = build_message_from_column(rows, col_index)
-                await channel.send(msg)
-            else:
-                await channel.send("Aucun DJ/Modulox trouvé pour aujourd'hui !")
+            try:
+                rows = await fetch_google_sheet_csv(GOOGLE_SHEET_URL)
+                if rows is None:
+                    await channel.send("❌ Erreur lors de la récupération du Google Sheet")
+                    continue
+                    
+                col_index = get_today_column(rows)
+                if col_index is not None:
+                    msg = build_message_from_column(rows, col_index)
+                    if msg:
+                        await channel.send(msg)
+                    else:
+                        await channel.send("⚠️ Colonne trouvée mais aucune donnée disponible")
+                else:
+                    await channel.send("❌ Aucune colonne ne correspond à aujourd'hui")
+            except Exception as e:
+                print(f"❌ Erreur dans daily_task: {e}")
+                await channel.send(f"❌ Erreur: {e}")
+        else:
+            print(f"❌ Canal {CHANNEL_ID} introuvable")
 # --------------------------------------------------
 
 
 # ---------- ÉVÉNEMENTS BOT ----------
 @bot.event
 async def on_ready():
-    print(f"Connecté en tant que {bot.user}")
+    print(f"✅ Connecté en tant que {bot.user}")
     bot.loop.create_task(daily_task())
 
 
 @bot.command()
 async def test(ctx):
     """Commande pour tester le message du jour"""
-    rows = await fetch_google_sheet_csv(GOOGLE_SHEET_URL)
-    col_index = get_today_column(rows)
-    if col_index is not None:
-        msg = build_message_from_column(rows, col_index)
-        await ctx.send(msg)
-    else:
-        await ctx.send("Aucun DJ/Modulox trouvé pour aujourd'hui !")
+    print(f"\n🧪 Test lancé par {ctx.author}")
+    try:
+        rows = await fetch_google_sheet_csv(GOOGLE_SHEET_URL)
+        if rows is None:
+            await ctx.send("❌ Erreur lors de la récupération du Google Sheet")
+            return
+            
+        col_index = get_today_column(rows)
+        if col_index is not None:
+            msg = build_message_from_column(rows, col_index)
+            if msg:
+                await ctx.send(msg)
+            else:
+                await ctx.send("⚠️ Colonne trouvée mais aucune donnée disponible")
+        else:
+            await ctx.send("❌ Aucune colonne ne correspond à aujourd'hui")
+    except Exception as e:
+        print(f"❌ Erreur: {e}")
+        await ctx.send(f"❌ Erreur: {e}")
+
+
+@bot.command()
+async def debug(ctx):
+    """Affiche les premières lignes du CSV pour déboguer"""
+    try:
+        rows = await fetch_google_sheet_csv(GOOGLE_SHEET_URL)
+        if rows is None:
+            await ctx.send("❌ Erreur lors de la récupération du Google Sheet")
+            return
+        
+        debug_msg = f"**Debug CSV:**\n"
+        debug_msg += f"Nombre de lignes: {len(rows)}\n"
+        debug_msg += f"Date du jour recherchée: {datetime.now(tz).strftime('%d/%m/%Y')}\n\n"
+        debug_msg += f"**Première ligne (dates):**\n"
+        
+        if rows:
+            for i, cell in enumerate(rows[0][:10]):  # Affiche les 10 premières colonnes
+                debug_msg += f"Col {i}: `{cell}`\n"
+        
+        await ctx.send(debug_msg)
+    except Exception as e:
+        await ctx.send(f"❌ Erreur: {e}")
 # --------------------------------------------------
 
 bot.run(TOKEN)
