@@ -33,22 +33,45 @@ async def fetch_google_sheet_csv(url: str):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
             text = await resp.text()
-            reader = csv.DictReader(io.StringIO(text))
+            reader = csv.reader(io.StringIO(text))
             return list(reader)
 
 
-def get_today_row(rows):
-    today_str = datetime.now(tz).strftime("%d/%m/%Y")  # adapte le format si besoin
-    for row in rows:
-        if row["Date"] == today_str:  # remplace "Date" par le nom exact de ta colonne date
-            return row
-    return None
+def get_today_column(rows):
+    today = datetime.now(tz).date()
+    header = rows[0]  # Ligne 1 = dates
+    col_index = None
+    for i, date_str in enumerate(header):
+        try:
+            date_str = date_str.strip()
+            if "-" in date_str:
+                row_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            elif "/" in date_str:
+                row_date = datetime.strptime(date_str, "%d/%m/%Y").date()
+            else:
+                continue
+            if row_date == today:
+                col_index = i
+                break
+        except Exception:
+            continue
+    return col_index
 
 
-def build_message_from_row(row):
-    # Adaptation selon le format exact des colonnes DJ et Modulox
-    dj = [item.strip() for item in row["DJ"].split(",")]
-    modulox = [item.strip() for item in row["Modulox"].split(",")]
+def build_message_from_column(rows, col_index):
+    # DJs : lignes 4 à 19 → indices 3 à 18
+    dj = []
+    for row in rows[3:19]:
+        cell = row[col_index].strip()
+        if cell:
+            dj.extend([item.strip() for item in cell.split(",")])
+
+    # Modulox : lignes 21 à 25 → indices 20 à 24
+    modulox = []
+    for row in rows[20:25]:
+        cell = row[col_index].strip()
+        if cell:
+            modulox.extend([item.strip() for item in cell.split(",")])
 
     message = "**DJ du jour :**\n"
     for item in dj:
@@ -65,6 +88,7 @@ def build_message_from_row(row):
             message += f"- {item}\n"
 
     return message
+
 # ------------------------------------------------------
 
 
@@ -84,9 +108,9 @@ async def daily_task():
         channel = bot.get_channel(CHANNEL_ID)
         if channel:
             rows = await fetch_google_sheet_csv(GOOGLE_SHEET_URL)
-            today_row = get_today_row(rows)
-            if today_row:
-                msg = build_message_from_row(today_row)
+            col_index = get_today_column(rows)
+            if col_index is not None:
+                msg = build_message_from_column(rows, col_index)
                 await channel.send(msg)
             else:
                 await channel.send("Aucun DJ/Modulox trouvé pour aujourd'hui !")
@@ -104,9 +128,9 @@ async def on_ready():
 async def test(ctx):
     """Commande pour tester le message du jour"""
     rows = await fetch_google_sheet_csv(GOOGLE_SHEET_URL)
-    today_row = get_today_row(rows)
-    if today_row:
-        msg = build_message_from_row(today_row)
+    col_index = get_today_column(rows)
+    if col_index is not None:
+        msg = build_message_from_column(rows, col_index)
         await ctx.send(msg)
     else:
         await ctx.send("Aucun DJ/Modulox trouvé pour aujourd'hui !")
