@@ -9,26 +9,26 @@ import csv
 import io
 from dotenv import load_dotenv
 
-# ------------ CHARGEMENT DES VARIABLES D'ENVIRONNEMENT ------------
+# ------------ VARIABLES D'ENVIRONNEMENT ------------
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 GOOGLE_SHEET_URL = os.getenv("GOOGLE_DOC_URL")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
-POST_HOUR = 2  # Publication à 02h00 heure française
+POST_HOUR = 2  # Publication à 02h00
 
 if not TOKEN or not GOOGLE_SHEET_URL or not CHANNEL_ID:
-    raise ValueError("Les variables d'environnement DISCORD_TOKEN, GOOGLE_DOC_URL et CHANNEL_ID doivent être définies !")
+    raise ValueError("DISCORD_TOKEN, GOOGLE_DOC_URL et CHANNEL_ID doivent être définies !")
 CHANNEL_ID = int(CHANNEL_ID)
-# ------------------------------------------------------------------
+# ---------------------------------------------------
 
 tz = pytz.timezone("Europe/Paris")
 
 intents = discord.Intents.default()
-intents.message_content = True  # nécessaire pour les commandes prefixées
+intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
-# ---------- FONCTIONS POUR LE GOOGLE SHEET ----------
+# ---------- FONCTIONS ----------
 async def fetch_google_sheet_csv(url: str):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
@@ -40,38 +40,37 @@ async def fetch_google_sheet_csv(url: str):
 def get_today_column(rows):
     today = datetime.now(tz).date()
     header = rows[0]  # Ligne 1 = dates
-    col_index = None
     for i, date_str in enumerate(header):
+        date_str = date_str.strip()
+        if not date_str:
+            continue
         try:
-            date_str = date_str.strip()
-            if "-" in date_str:
-                row_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-            elif "/" in date_str:
-                row_date = datetime.strptime(date_str, "%d/%m/%Y").date()
-            else:
-                continue
+            row_date = datetime.strptime(date_str, "%d/%m/%Y").date()
             if row_date == today:
-                col_index = i
-                break
+                return i
         except Exception:
             continue
-    return col_index
+    return None
 
 
 def build_message_from_column(rows, col_index):
     # DJs : lignes 4 à 19 → indices 3 à 18
     dj = []
     for row in rows[3:19]:
+        if col_index >= len(row):
+            continue
         cell = row[col_index].strip()
         if cell:
-            dj.extend([item.strip() for item in cell.split(",")])
+            dj.append(cell)
 
     # Modulox : lignes 21 à 25 → indices 20 à 24
     modulox = []
     for row in rows[20:25]:
+        if col_index >= len(row):
+            continue
         cell = row[col_index].strip()
         if cell:
-            modulox.extend([item.strip() for item in cell.split(",")])
+            modulox.append(cell)
 
     message = "**DJ du jour :**\n"
     for item in dj:
@@ -88,8 +87,7 @@ def build_message_from_column(rows, col_index):
             message += f"- {item}\n"
 
     return message
-
-# ------------------------------------------------------
+# --------------------------------------------------
 
 
 # ---------- TÂCHE QUOTIDIENNE ----------
@@ -114,7 +112,7 @@ async def daily_task():
                 await channel.send(msg)
             else:
                 await channel.send("Aucun DJ/Modulox trouvé pour aujourd'hui !")
-# ------------------------------------------------------
+# --------------------------------------------------
 
 
 # ---------- ÉVÉNEMENTS BOT ----------
@@ -134,6 +132,6 @@ async def test(ctx):
         await ctx.send(msg)
     else:
         await ctx.send("Aucun DJ/Modulox trouvé pour aujourd'hui !")
-# ------------------------------------------------------
+# --------------------------------------------------
 
 bot.run(TOKEN)
