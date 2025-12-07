@@ -39,18 +39,21 @@ async def fetch_google_sheet_csv(url: str):
 
 def get_today_column(rows):
     today = datetime.now(tz).date()
-    header = rows[0]  # Ligne 1 = dates
+    header = rows[0]
     for i, date_str in enumerate(header):
-        date_str = date_str.strip()
+        date_str = date_str.strip().replace('"', '')  # enlève les guillemets
         if not date_str:
             continue
-        try:
-            row_date = datetime.strptime(date_str, "%d/%m/%Y").date()
-            if row_date == today:
-                return i
-        except Exception:
-            continue
+        for fmt in ("%d/%m/%Y", "%Y-%m-%d"):  # on teste plusieurs formats
+            try:
+                row_date = datetime.strptime(date_str, fmt).date()
+                if row_date == today:
+                    return i
+                break
+            except ValueError:
+                continue
     return None
+
 
 
 def build_message_from_column(rows, col_index):
