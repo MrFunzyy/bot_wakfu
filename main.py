@@ -5,6 +5,8 @@ import os
 from datetime import datetime, timedelta
 import asyncio
 import pytz
+from dotenv import load_dotenv
+load_dotenv()
 
 # ------------ CONFIGURATION ------------
 TOKEN = os.getenv("DISCORD_TOKEN")
