@@ -206,9 +206,9 @@ async def test(ctx):
             
         col_index = get_today_column(rows)
         if col_index is not None:
-            msg = build_message_from_column(rows, col_index)
-            if msg:
-                await ctx.send(msg)
+            embed = build_embed_from_column(rows, col_index)
+            if embed:
+                await ctx.send(embed=embed)
             else:
                 await ctx.send("⚠️ Colonne trouvée mais aucune donnée disponible")
         else:
