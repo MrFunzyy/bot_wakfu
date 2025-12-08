@@ -124,23 +124,23 @@ def build_embed_from_column(rows, col_index):
     dj_text = ""
     if dj:
         for label, value in dj:
-            emoji = "⭐" if value in modulox_values else "🎮"
+            emoji = "⭐" if value in modulox_values else "🎯"
             dj_text += f"{emoji} **{label}** : {value}\n"
     else:
         dj_text = "Aucun DJ prévu"
     
-    embed.add_field(name="🎧 DJs du jour", value=dj_text, inline=False)
+    embed.add_field(name="🏹 DJs du jour", value=dj_text, inline=False)
     
     # Ajouter le champ Modulox
     modulox_text = ""
     if modulox:
         for label, value in modulox:
-            emoji = "⭐" if value in dj_values else "🎯"
+            emoji = "⭐" if value in dj_values else "👾"
             modulox_text += f"{emoji} **{label}** : {value}\n"
     else:
         modulox_text = "Aucun Modulox prévu"
     
-    embed.add_field(name="🔮 Modulox du jour", value=modulox_text, inline=False)
+    embed.add_field(name="🤖 Modulox du jour", value=modulox_text, inline=False)
     
     # Ajouter un footer
     embed.set_footer(text="Bot Planning • Mise à jour automatique")
