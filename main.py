@@ -69,9 +69,9 @@ def get_today_column(rows):
     return None
 
 
-def build_message_from_column(rows, col_index):
-    """Construit le message Discord à partir des données"""
-    print(f"📝 Construction du message pour la colonne {col_index}")
+def build_embed_from_column(rows, col_index):
+    """Construit un embed Discord élégant à partir des données"""
+    print(f"📝 Construction de l'embed pour la colonne {col_index}")
     
     # Vérifier qu'il y a assez de lignes
     if len(rows) < 25:
@@ -111,27 +111,41 @@ def build_message_from_column(rows, col_index):
     modulox_values = [val for _, val in modulox]
     dj_values = [val for _, val in dj]
 
-    message = "**DJ du jour :**\n"
+    # Créer l'embed
+    today = datetime.now(tz).strftime("%d/%m/%Y")
+    embed = discord.Embed(
+        title="📅 Planning du Jour",
+        description=f"Programme pour le **{today}**",
+        color=discord.Color.blue(),
+        timestamp=datetime.now(tz)
+    )
+    
+    # Ajouter le champ DJ
+    dj_text = ""
     if dj:
         for label, value in dj:
-            if value in modulox_values:
-                message += f"- **{label} : {value}**\n"
-            else:
-                message += f"- {label} : {value}\n"
+            emoji = "⭐" if value in modulox_values else "🎮"
+            dj_text += f"{emoji} **{label}** : {value}\n"
     else:
-        message += "- Aucun\n"
-
-    message += "\n**Modulox du jour :**\n"
+        dj_text = "Aucun DJ prévu"
+    
+    embed.add_field(name="🎧 DJs du jour", value=dj_text, inline=False)
+    
+    # Ajouter le champ Modulox
+    modulox_text = ""
     if modulox:
         for label, value in modulox:
-            if value in dj_values:
-                message += f"- **{label} : {value}**\n"
-            else:
-                message += f"- {label} : {value}\n"
+            emoji = "⭐" if value in dj_values else "🎯"
+            modulox_text += f"{emoji} **{label}** : {value}\n"
     else:
-        message += "- Aucun\n"
+        modulox_text = "Aucun Modulox prévu"
+    
+    embed.add_field(name="🔮 Modulox du jour", value=modulox_text, inline=False)
+    
+    # Ajouter un footer
+    embed.set_footer(text="Bot Planning • Mise à jour automatique")
 
-    return message
+    return embed
 # --------------------------------------------------
 
 
@@ -158,9 +172,9 @@ async def daily_task():
                     
                 col_index = get_today_column(rows)
                 if col_index is not None:
-                    msg = build_message_from_column(rows, col_index)
-                    if msg:
-                        await channel.send(msg)
+                    embed = build_embed_from_column(rows, col_index)
+                    if embed:
+                        await channel.send(embed=embed)
                     else:
                         await channel.send("⚠️ Colonne trouvée mais aucune donnée disponible")
                 else:
