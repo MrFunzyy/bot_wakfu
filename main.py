@@ -150,7 +150,7 @@ def build_embed_from_column(rows, col_index):
             if value in dj_values:
                 # En rouge avec emoji étoile si dans les deux
                 emoji = "⭐"
-                modulox_text += f"{emoji} **{label}** : ```diff\n- {value}\n```"
+                modulox_text += f"{emoji} **{label}** : diff\n- {value}\n"
             else:
                 # Normal avec emoji alien
                 emoji = "👾"
