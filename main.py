@@ -43,8 +43,13 @@ async def fetch_google_sheet_csv(url: str):
 
 def get_today_column(rows):
     """Trouve la colonne correspondant à aujourd'hui"""
-    today = datetime.now(tz).strftime("%d/%m/%Y")
-    print(f"📅 Date recherchée: {today}")
+    # Format recherché : "Aujourd'hui le 9/12" (jour/mois sans le zéro devant)
+    today = datetime.now(tz)
+    day = today.day  # Sans zéro devant (ex: 9 au lieu de 09)
+    month = today.month  # Sans zéro devant (ex: 12)
+    today_format = f"Aujourd'hui le {day}/{month}"
+    
+    print(f"📅 Date recherchée: {today_format}")
     
     if not rows or len(rows) == 0:
         print("❌ Aucune ligne dans le CSV")
@@ -61,11 +66,11 @@ def get_today_column(rows):
         clean_date = date_str.strip().replace('"', '').replace("'", "")
         print(f"  Colonne {i}: '{date_str}' -> nettoyé: '{clean_date}'")
         
-        if clean_date == today:
+        if clean_date == today_format:
             print(f"✅ Date trouvée à la colonne {i}")
             return i
     
-    print(f"❌ Aucune colonne ne correspond à {today}")
+    print(f"❌ Aucune colonne ne correspond à {today_format}")
     return None
 
 
@@ -112,10 +117,11 @@ def build_embed_from_column(rows, col_index):
     dj_values = [val for _, val in dj]
 
     # Créer l'embed
-    today = datetime.now(tz).strftime("%d/%m/%Y")
+    today = datetime.now(tz)
+    today_display = f"{today.day}/{today.month}/{today.year}"
     embed = discord.Embed(
         title="📅 Planning du Jour",
-        description=f"Programme pour le **{today}**",
+        description=f"Programme pour le **{today_display}**",
         color=discord.Color.blue(),
         timestamp=datetime.now(tz)
     )
@@ -124,23 +130,35 @@ def build_embed_from_column(rows, col_index):
     dj_text = ""
     if dj:
         for label, value in dj:
-            emoji = "⭐" if value in modulox_values else "🎯"
-            dj_text += f"{emoji} **{label}** : {value}\n"
+            if value in modulox_values:
+                # En rouge avec emoji étoile si dans les deux
+                emoji = "⭐"
+                dj_text += f"{emoji} **{label}** : ```diff\n- {value}\n```"
+            else:
+                # Normal avec emoji manette
+                emoji = "🎮"
+                dj_text += f"{emoji} **{label}** : {value}\n"
     else:
         dj_text = "Aucun DJ prévu"
     
-    embed.add_field(name="🏹 DJs du jour", value=dj_text, inline=False)
+    embed.add_field(name="🎧 DJs du jour", value=dj_text, inline=False)
     
     # Ajouter le champ Modulox
     modulox_text = ""
     if modulox:
         for label, value in modulox:
-            emoji = "⭐" if value in dj_values else "👾"
-            modulox_text += f"{emoji} **{label}** : {value}\n"
+            if value in dj_values:
+                # En rouge avec emoji étoile si dans les deux
+                emoji = "⭐"
+                modulox_text += f"{emoji} **{label}** : ```diff\n- {value}\n```"
+            else:
+                # Normal avec emoji cible
+                emoji = "🎯"
+                modulox_text += f"{emoji} **{label}** : {value}\n"
     else:
         modulox_text = "Aucun Modulox prévu"
     
-    embed.add_field(name="🤖 Modulox du jour", value=modulox_text, inline=False)
+    embed.add_field(name="🔮 Modulox du jour", value=modulox_text, inline=False)
     
     # Ajouter un footer
     embed.set_footer(text="Bot Planning • Mise à jour automatique")
