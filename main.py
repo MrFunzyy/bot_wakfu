@@ -245,9 +245,12 @@ async def debug(ctx):
             await ctx.send("❌ Erreur lors de la récupération du Google Sheet")
             return
         
+        today = datetime.now(tz)
+        today_search = f"Aujourd'hui le {today.day}/{today.month}"
+        
         debug_msg = f"**Debug CSV:**\n"
         debug_msg += f"Nombre de lignes: {len(rows)}\n"
-        debug_msg += f"Date du jour recherchée: {datetime.now(tz).strftime('%d/%m/%Y')}\n\n"
+        debug_msg += f"Date du jour recherchée: {today_search}\n\n"
         debug_msg += f"**Première ligne (dates):**\n"
         
         if rows:
