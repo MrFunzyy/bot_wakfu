@@ -62,8 +62,8 @@ def get_today_column(rows):
         if not date_str:
             continue
         
-        # Nettoyage plus robuste
-        clean_date = date_str.strip().replace('"', '').replace("'", "")
+        # Nettoyage : enlever guillemets mais garder les apostrophes, et enlever les retours à la ligne
+        clean_date = date_str.strip().replace('"', '').replace('\n', ' ')
         print(f"  Colonne {i}: '{date_str}' -> nettoyé: '{clean_date}'")
         
         if clean_date == today_format:
