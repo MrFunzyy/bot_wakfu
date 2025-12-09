@@ -131,34 +131,34 @@ def build_embed_from_column(rows, col_index):
     if dj:
         for label, value in dj:
             if value in modulox_values:
-                # En rouge avec emoji étoile si dans les deux
+                # En gras avec emoji étoile si dans les deux
                 emoji = "⭐"
-                dj_text += f"{emoji} **{label}** : ```diff\n- {value}\n```"
+                dj_text += f"{emoji} **{label} : {value}**\n"
             else:
-                # Normal avec emoji cible
-                emoji = "🎯"
+                # Normal avec emoji manette
+                emoji = "🎮"
                 dj_text += f"{emoji} **{label}** : {value}\n"
     else:
         dj_text = "Aucun DJ prévu"
     
-    embed.add_field(name="🏹 DJs du jour", value=dj_text, inline=False)
+    embed.add_field(name="🎧 DJs du jour", value=dj_text, inline=False)
     
     # Ajouter le champ Modulox
     modulox_text = ""
     if modulox:
         for label, value in modulox:
             if value in dj_values:
-                # En rouge avec emoji étoile si dans les deux
+                # En gras avec emoji étoile si dans les deux
                 emoji = "⭐"
-                modulox_text += f"{emoji} **{label}** : diff\n- {value}\n"
+                modulox_text += f"{emoji} **{label} : {value}**\n"
             else:
-                # Normal avec emoji alien
-                emoji = "👾"
+                # Normal avec emoji cible
+                emoji = "🎯"
                 modulox_text += f"{emoji} **{label}** : {value}\n"
     else:
         modulox_text = "Aucun Modulox prévu"
     
-    embed.add_field(name="🤖 Modulox du jour", value=modulox_text, inline=False)
+    embed.add_field(name="🔮 Modulox du jour", value=modulox_text, inline=False)
     
     # Ajouter un footer
     embed.set_footer(text="Bot Planning • Mise à jour automatique")
